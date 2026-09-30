@@ -1,0 +1,13 @@
+[tests]
+testClient1 ansible_host=192.168.1.160 vlan_id=1 vlan_ip=10.10.10.254
+testServer1 ansible_host=192.168.1.161 vlan_id=1 vlan_ip=10.10.10.1
+testClient2 ansible_host=192.168.1.162 vlan_id=2 vlan_ip=10.10.10.254
+testServer2 ansible_host=192.168.1.163 vlan_id=2 vlan_ip=10.10.10.1
+
+[routers]
+inetRouter   ansible_host=192.168.1.110 bond_ip=192.168.250.1 bond_slaves="['enp6s23','enp7s1']" bond_mac=bc:24:11:51:75:14
+centralRouter ansible_host=192.168.1.111 bond_ip=192.168.250.2 bond_slaves="['enp7s2','enp7s3']" bond_mac=bc:24:11:ab:a9:00
+
+[all:vars]
+ansible_user=ubuntu
+ansible_ssh_common_args=-o StrictHostKeyChecking=no

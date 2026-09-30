@@ -1,0 +1,17 @@
+# Bond active-backup между inetRouter и centralRouter
+# ВНИМАНИЕ: macaddress задан явно — ВМ клоны одной базы (общий machine-id),
+# без него systemd-networkd генерирует одинаковый MAC для bond0 на обеих сторонах.
+network:
+  version: 2
+  ethernets:
+{% for s in bond_slaves %}
+    {{ s }}: {}
+{% endfor %}
+  bonds:
+    bond0:
+      interfaces: {{ bond_slaves }}
+      macaddress: {{ bond_mac }}
+      addresses: [{{ bond_ip }}/30]
+      parameters:
+        mode: active-backup
+        mii-monitor-interval: 100

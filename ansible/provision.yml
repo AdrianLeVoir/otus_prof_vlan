@@ -1,0 +1,80 @@
+---
+# ДЗ: VLAN + bonding
+# VLAN: testClient1<->testServer1 (vlan1), testClient2<->testServer2 (vlan2)
+# Bond: active-backup между inetRouter и centralRouter
+
+- name: Base set up
+  hosts: all
+  become: true
+  tasks:
+    - name: install base tools
+      apt:
+        name: [vim, traceroute, tcpdump, net-tools]
+        state: present
+        update_cache: true
+
+# ---------- VLAN ----------
+# Каждый хост сам тегирует 802.1Q: сабинтерфейс vlan{id} на физическом порту testLAN.
+# Коммутация прозрачная — мост пропускает тегированные кадры, изоляция обеспечивается тегом.
+
+- name: set up VLANs on test hosts
+  hosts: tests
+  become: true
+  tasks:
+    - name: render vlan netplan
+      template:
+        src: 50-vlan.yaml.j2
+        dest: /etc/netplan/50-lab.yaml
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: remove stale netplan files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/netplan/inet.yaml
+        - /etc/netplan/00-installer-config.yaml
+        - /etc/netplan/50-cloud-init.yaml
+
+    - name: netplan apply
+      command: netplan apply
+      changed_when: true
+
+    - name: verify vlan interface
+      command: ip -4 -br addr show "vlan{{ vlan_id }}"
+      register: vlan_out
+      changed_when: false
+
+    - debug:
+        var: vlan_out.stdout_lines
+
+# ---------- Bond ----------
+# active-backup (mode=1, miimon=100). macaddress задан ЯВНО на каждой стороне:
+# ВМ клоны одной базы (общий machine-id) — без явного MAC оба bond0 получают
+# одинаковый случайный MAC и мост не форвардит трафик.
+
+- name: set up bond0 on routers
+  hosts: routers
+  become: true
+  tasks:
+    - name: render bond netplan
+      template:
+        src: 60-bond.yaml.j2
+        dest: /etc/netplan/60-bond.yaml
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: netplan apply
+      command: netplan apply
+      changed_when: true
+
+    - name: show bond state
+      command: cat /proc/net/bonding/bond0
+      register: bond_out
+      changed_when: false
+
+    - debug:
+        msg: "{{ bond_out.stdout_lines | select('match', 'Bonding Mode|Currently Active|Slave Interface') | list }}"

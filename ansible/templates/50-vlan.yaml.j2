@@ -1,0 +1,19 @@
+# VLAN на тестовом хосте: сабинтерфейс vlan{{ vlan_id }} на порту testLAN
+# ansible_host задаёт mgmt-адрес (192.168.1.16x), vlan_ip — адрес в 10.10.10.0/24
+network:
+  version: 2
+  ethernets:
+    enp6s18:
+      addresses: [192.168.1.16{{ vlan_id }}0/24]
+      routes:
+        - to: default
+          via: 192.168.1.1
+      nameservers:
+        addresses: [8.8.8.8]
+    enp6s19: {}
+  vlans:
+    vlan{{ vlan_id }}:
+      id: {{ vlan_id }}
+      link: enp6s19
+      dhcp4: no
+      addresses: [{{ vlan_ip }}/24]
